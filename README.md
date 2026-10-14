@@ -6,7 +6,7 @@ A smarter way to care for home. A working, database-backed MVP for household gro
 
 ## Run locally
 
-Requires Node.js 24 (uses built-in `node:sqlite`).
+Requires Node.js 24. Local development uses a SQLite file through libSQL; Vercel uses persistent Turso storage. See [Vercel deployment](docs/VERCEL.md).
 
 ```powershell
 npm ci
@@ -48,5 +48,6 @@ Pending: PostgreSQL/Prisma migration; independent household selection and househ
 See [architecture](docs/ARCHITECTURE.md), [API](docs/API.md), and [operations/deployment](docs/OPERATIONS.md). The database migration and repeatable seed run in `lib/db.ts`; no migration-capable production ORM is claimed.
 
 Run `npm run test:integration` after a successful production build to verify customer/admin workflows against an isolated temporary database. Test-only admin credentials are generated in memory; no default password is stored.
+
 
 

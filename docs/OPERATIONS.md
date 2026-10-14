@@ -2,6 +2,8 @@
 
 ## Supported current deployment
 
+For Vercel with persistent Turso, see [the cloud deployment guide](VERCEL.md). The instructions below describe the local-file deployment option.
+
 Single persistent Node 24 server with a writable `data` volume. Build with `npm ci && npm run build`; start with `npm start` behind an HTTPS reverse proxy. Load private environment variables using the service manager. Do not deploy this SQLite build to ephemeral/serverless instances or multiple replicas. Set `ENABLE_SAMPLE_ORDERS` only in a demonstration environment. HTTPS is required for production Secure cookies. Database initializes and applies migration version 1 on startup.
 
 Production rollout: Phase 1 runs acceptance tests in staging. Phase 2 replaces SQLite with PostgreSQL/Prisma, adds independently tested adapters and jobs, distributed rate limiting, reviewed compliance/tax rules and verified warehouse events. Phase 3 adds historical forecasting and additional markets after route-by-route approval. No current shipping rule is an authoritative import rule.
@@ -51,3 +53,4 @@ flowchart LR
 
 
 A Dockerfile is included for a persistent single-instance deployment; the container build has not been executed here. Mount a persistent volume at /app/data, inject private runtime environment variables, and place behind HTTPS. Do not include .env files in the build context (excluded by .dockerignore).
+

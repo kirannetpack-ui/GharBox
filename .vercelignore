@@ -1,0 +1,6 @@
+.env*
+data
+docs/gharbox-preview.png
+node_modules
+.next
+*.tsbuildinfo
