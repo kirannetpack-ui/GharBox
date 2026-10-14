@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {preferencesSchema,recommend,localAnswer} from '../lib/intelligence.ts';
+import type {Product} from '../lib/engine.ts';
+const rice:Product={id:'rice',name:'Rice',brand:'Test',category:'Grains',price:500,stock:100,weight:1,l:20,w:15,h:10,daily:.02,emoji:'🌾',pack:'1 kg',vegan:1};
+test('pantry and incoming packs prevent unnecessary replenishment',()=>{const p=preferencesSchema.parse({adults:2,children:2,days:30,budget:5000,pantry:{rice:1},onOrder:{rice:1}});const result=recommend([rice],p);assert.equal(result.items.length,0);assert.match(result.omitted[0].reason,/Pantry/);});
+test('quantities are explainable, budget-bounded and do not mutate input',()=>{const products=[rice,{...rice,id:'dal',name:'Lentils'}];const before=JSON.stringify(products);const r=recommend(products,preferencesSchema.parse({budget:500,adults:4}));assert.equal(r.subtotal,500);assert.equal(r.items.length,1);assert.match(r.items[0].reason,/safety days/);assert.equal(JSON.stringify(products),before);assert.match(r.disclaimer,/Suggestions only/);});
+test('allergies fail closed for unknown ingredients and known conflicts',()=>{const p=preferencesSchema.parse({allergies:['milk'],budget:10000});assert.equal(recommend([rice],p).items.length,0);assert.equal(recommend([{...rice,ingredientsVerified:true,allergens:['milk']}],p).items.length,0);assert.equal(recommend([{...rice,ingredientsVerified:true,allergens:[]}],p).items.length,1);});
+test('exclusions and dietary preferences remain hard filters',()=>{assert.equal(recommend([rice],preferencesSchema.parse({excluded:['rice']})).items.length,0);assert.equal(recommend([{...rice,vegan:0}],preferencesSchema.parse({diet:'vegan'})).items.length,0);});
+test('preferred categories get budget priority',()=>{const r=recommend([rice,{...rice,id:'tea',category:'Tea'}],preferencesSchema.parse({priorities:['Tea'],budget:500}));assert.equal(r.items[0].productId,'tea');});
+test('shopping challenges generate relevant guidance without delivery promises',()=>{const r=recommend([rice],preferencesSchema.parse({issues:['unreliable-delivery','waste']}));assert.equal(r.insights.length,2);assert.match(r.insights[0],/confirmation/);assert.match(localAnswer('How much pantry stock?',undefined),/subtract/);});

@@ -1,0 +1,15 @@
+PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL;
+CREATE TABLE IF NOT EXISTS migrations(version INTEGER PRIMARY KEY,applied TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,email TEXT UNIQUE NOT NULL,name TEXT NOT NULL,password TEXT NOT NULL,role TEXT NOT NULL DEFAULT 'customer');
+CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,userId TEXT REFERENCES users(id),expires INTEGER);
+CREATE TABLE IF NOT EXISTS destinations(code TEXT PRIMARY KEY,name TEXT,currency TEXT,active INTEGER DEFAULT 1,maxWeight REAL,length REAL,width REAL,height REAL,divisor REAL,baseRate INTEGER,kgRate INTEGER,region TEXT);
+CREATE TABLE IF NOT EXISTS products(id TEXT PRIMARY KEY,name TEXT,brand TEXT,category TEXT,price INTEGER CHECK(price>0),stock INTEGER CHECK(stock>=0),weight REAL,l REAL,w REAL,h REAL,daily REAL,emoji TEXT,pack TEXT,vegan INTEGER DEFAULT 1);
+CREATE TABLE IF NOT EXISTS households(id TEXT PRIMARY KEY,userId TEXT REFERENCES users(id),name TEXT,recipient TEXT,address TEXT,destination TEXT REFERENCES destinations(code),adults INTEGER,children INTEGER,budget INTEGER,days INTEGER,vegan INTEGER DEFAULT 0);
+CREATE TABLE IF NOT EXISTS baskets(userId TEXT REFERENCES users(id),productId TEXT REFERENCES products(id),quantity INTEGER CHECK(quantity>0),reason TEXT,PRIMARY KEY(userId,productId));
+CREATE TABLE IF NOT EXISTS orders(id TEXT PRIMARY KEY,userId TEXT REFERENCES users(id),householdId TEXT REFERENCES households(id),status TEXT,total INTEGER,currency TEXT,snapshot TEXT,idempotency TEXT,created TEXT DEFAULT CURRENT_TIMESTAMP,UNIQUE(userId,idempotency));
+CREATE TABLE IF NOT EXISTS requests(id TEXT PRIMARY KEY,userId TEXT REFERENCES users(id),name TEXT,brand TEXT,comments TEXT,status TEXT DEFAULT 'submitted',created TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS subscriptions(userId TEXT PRIMARY KEY REFERENCES users(id),status TEXT DEFAULT 'paused',intervalDays INTEGER DEFAULT 30,nextDate TEXT,consent INTEGER DEFAULT 0);
+CREATE TABLE IF NOT EXISTS notifications(id TEXT PRIMARY KEY,userId TEXT REFERENCES users(id),message TEXT,created TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS audit(id TEXT PRIMARY KEY,actor TEXT REFERENCES users(id),action TEXT,detail TEXT,created TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS orders_user ON orders(userId,created);
+INSERT OR IGNORE INTO migrations(version) VALUES(1);

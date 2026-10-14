@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS onboarding(userId TEXT PRIMARY KEY REFERENCES users(id),step INTEGER DEFAULT 0,complete INTEGER DEFAULT 0,answers TEXT NOT NULL,updated TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS recommendation_drafts(userId TEXT PRIMARY KEY REFERENCES users(id),payload TEXT NOT NULL,created TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS product_media(productId TEXT PRIMARY KEY REFERENCES products(id),imageUrl TEXT,bytes BLOB,mime TEXT,credit TEXT,sourceUrl TEXT,updated TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS product_facts(productId TEXT PRIMARY KEY REFERENCES products(id),allergens TEXT DEFAULT '[]',ingredientsVerified INTEGER DEFAULT 0);
+CREATE TABLE IF NOT EXISTS discoveries(code TEXT PRIMARY KEY,name TEXT,brand TEXT,category TEXT,pack TEXT,imageUrl TEXT,sourceUrl TEXT,source TEXT,origin TEXT,allergens TEXT,updated INTEGER);
+CREATE TABLE IF NOT EXISTS discovery_runs(id INTEGER PRIMARY KEY,updated INTEGER,status TEXT,detail TEXT);
+CREATE TABLE IF NOT EXISTS assistant_messages(id TEXT PRIMARY KEY,userId TEXT REFERENCES users(id),role TEXT,content TEXT,mode TEXT,created TEXT DEFAULT CURRENT_TIMESTAMP);
+INSERT OR IGNORE INTO migrations(version) VALUES(2);

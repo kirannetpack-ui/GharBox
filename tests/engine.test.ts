@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {forecast,pack,type Product,type Rules} from '../lib/engine.ts';
+const p:Product={id:'rice',name:'Rice',brand:'Test',category:'Grains',price:500,stock:100,weight:5,l:20,w:15,h:10,daily:.02,emoji:'🌾',pack:'5kg',vegan:1};
+const r:Rules={code:'NP',name:'Nepal',currency:'NPR',active:1,maxWeight:12,length:40,width:30,height:30,divisor:5000,baseRate:400,kgRate:80};
+test('four-person forecast respects pack rounding and budget',()=>{const rows=forecast([p],2,2,30,1000,false);assert.equal(rows[0].quantity,2);assert.equal(rows[0].confidence,'low');assert.ok(rows[0].reason.includes('Starter estimate'));});
+test('vegan exclusions and depleted stock are enforced',()=>{assert.deepEqual(forecast([{...p,vegan:0}],2,0,30,2000,true),[]);assert.deepEqual(forecast([{...p,stock:0}],2,0,30,2000,false),[]);});
+test('heavy basket splits and uses destination-specific limits',()=>{const a=pack([{product:p,quantity:5}],r),b=pack([{product:p,quantity:5}],{...r,maxWeight:6});assert.equal(a.cartons.length,3);assert.equal(b.cartons.length,5);assert.ok(a.cartons.every(b=>b.weight<=r.maxWeight));assert.equal(a.total,a.subtotal+a.shipping+a.packaging);});
+test('placement is bounded and non-overlapping in three dimensions',()=>{const result=pack([{product:{...p,weight:.3},quantity:20}],r);for(const box of result.cartons){for(const a of box.items){assert.ok(a.x+a.l<=r.length&&a.y+a.w<=r.width&&a.z+a.h<=r.height);}for(let i=0;i<box.items.length;i++)for(let j=i+1;j<box.items.length;j++){const a=box.items[i],b=box.items[j];assert.ok(a.x+a.l<=b.x||b.x+b.l<=a.x||a.y+a.w<=b.y||b.y+b.w<=a.y||a.z+a.h<=b.z||b.z+b.h<=a.z);}}});
+test('invalid stock, inactive destinations and oversized products block quotes',()=>{assert.throws(()=>pack([{product:p,quantity:101}],r));assert.throws(()=>pack([{product:p,quantity:1}],{...r,active:0}));assert.throws(()=>pack([{product:{...p,l:200},quantity:1}],r));assert.throws(()=>pack([{product:{...p,stock:0},quantity:1}],r));});
+test('billable weight uses external carton volume and round-up',()=>{const box=pack([{product:{...p,weight:.1},quantity:1}],r).cartons[0];assert.equal(box.volumetric,42*32*32/5000);assert.equal(box.billable,9);});
