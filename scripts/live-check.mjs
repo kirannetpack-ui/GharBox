@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import {randomBytes} from 'node:crypto';
+const base=process.env.BASE_URL;
+if(!base?.startsWith('https://'))throw Error('Set BASE_URL to the public HTTPS deployment');
+let cookie='';
+async function api(path,body,status=200){const res=await fetch(`${base}/api/${path}`,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',Cookie:cookie},...(body?{body:JSON.stringify(body)}:{})});const data=await res.json();assert.equal(res.status,status,JSON.stringify(data));const set=res.headers.get('set-cookie');if(set)cookie=set.split(';')[0];return data;}
+const catalog=await api('catalog');assert.ok(catalog.products.length>0);assert.equal(catalog.destinations.find(d=>d.code==='NP').length,40);
+const email=`deployment-check-${Date.now()}@example.com`,password=randomBytes(24).toString('hex');
+await api('auth',{mode:'register',name:'Deployment verification',email,password});
+await api('onboarding',{step:5,complete:true,answers:{householdName:'Deployment test household',recipient:'Test recipient',address:'Test address only, Kathmandu',destination:'NP',adults:2,children:0,budget:15000,days:30,allergies:[],issues:['waste'],priorities:['Pulses'],excluded:['rice'],pantry:{dal:1},onOrder:{},aiConsent:false}});
+const suggestions=await api('recommendations',{});assert.ok(suggestions.items.length>0);assert.ok(!suggestions.items.some(p=>p.productId==='rice'));
+assert.equal((await api('dashboard')).basket.items.length,0);
+const chosen=suggestions.items.slice(0,2).map(p=>({productId:p.productId,quantity:1}));
+await api('recommendations/apply',{items:chosen});
+await api('logout',{});
+await api('auth',{mode:'login',email,password});
+assert.equal((await api('dashboard')).basket.items.length,chosen.length);
+assert.equal((await api('onboarding')).complete,1);
+await api('orders',{idempotency:crypto.randomUUID()},400);
+assert.equal((await api('dashboard')).orders.length,0);
+await api('logout',{});
+const discoveries=await api('discover');
+console.log(`PASS public HTTPS API, registration/login, durable household and basket, buyer-only approval, sample orders blocked; ${discoveries.products.length} photographed discoveries.`);
