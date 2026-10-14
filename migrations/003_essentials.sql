@@ -1,0 +1,8 @@
+-- Applied atomically by migrateCatalogue(); category/commodity fixtures are in lib/catalogue.ts.
+CREATE TABLE IF NOT EXISTS categories(id TEXT PRIMARY KEY,name TEXT NOT NULL,nameNe TEXT DEFAULT '',essential INTEGER DEFAULT 1,position INTEGER DEFAULT 0,active INTEGER DEFAULT 1);
+ CREATE TABLE IF NOT EXISTS commodities(id TEXT PRIMARY KEY,categoryId TEXT NOT NULL REFERENCES categories(id),name TEXT NOT NULL,nameNe TEXT DEFAULT '',searchTag TEXT DEFAULT '',active INTEGER DEFAULT 1);
+ CREATE TABLE IF NOT EXISTS product_details(productId TEXT PRIMARY KEY REFERENCES products(id),commodityId TEXT REFERENCES commodities(id),active INTEGER DEFAULT 1,quantity REAL DEFAULT 1,unit TEXT DEFAULT 'pack',cost INTEGER DEFAULT 0,priceSource TEXT DEFAULT 'Manual sample price',updated TEXT DEFAULT CURRENT_TIMESTAMP);
+ CREATE TABLE IF NOT EXISTS price_history(id TEXT PRIMARY KEY,productId TEXT REFERENCES products(id),oldPrice INTEGER,newPrice INTEGER,source TEXT,actor TEXT,created TEXT DEFAULT CURRENT_TIMESTAMP);
+ CREATE TABLE IF NOT EXISTS price_proposals(id TEXT PRIMARY KEY,productId TEXT REFERENCES products(id),price INTEGER,cost INTEGER,source TEXT,effective TEXT,status TEXT DEFAULT 'pending',created TEXT DEFAULT CURRENT_TIMESTAMP);
+ CREATE TABLE IF NOT EXISTS basket_prices(userId TEXT REFERENCES users(id),productId TEXT REFERENCES products(id),price INTEGER,PRIMARY KEY(userId,productId));
+ CREATE TABLE IF NOT EXISTS pantry_levels(userId TEXT REFERENCES users(id),productId TEXT REFERENCES products(id),packs REAL DEFAULT 0,updated TEXT DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(userId,productId));

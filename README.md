@@ -4,6 +4,8 @@ A smarter way to care for home. A working, database-backed MVP for household gro
 
 **New: household-first intelligence.** Start with **Your pantry guides** for a resumable requirements interview with Maya & Arjun in animated Nepali attire. Product/quantity suggestions remain separate until the buyer approves selected items. **Discover Nepal** automatically fetches and categorizes source-linked product photos. **Catalogue Studio** adds admin photo uploads, sourced product review/import and ingredient verification. Optional model conversation has a gateway adapter, but requires provider credentials and user consent; the default runs private guided rules. See [the intelligence guide](docs/INTELLIGENCE.md) for API contracts, data sources, licensing and exact implementation limits.
 
+**Essentials-first update:** editable English/Nepali categories and commodities, visual product/stock/price forms, supplier price proposals and history, buyer price-change review, pantry shelves, coverage and meal ideas. Snacks are opt-in for suggestions. See [essentials operations](docs/ESSENTIALS.md).
+
 ## Run locally
 
 Requires Node.js 24. Local development uses a SQLite file through libSQL; Vercel uses persistent Turso storage. See [Vercel deployment](docs/VERCEL.md).
@@ -48,6 +50,7 @@ Pending: PostgreSQL/Prisma migration; independent household selection and househ
 See [architecture](docs/ARCHITECTURE.md), [API](docs/API.md), and [operations/deployment](docs/OPERATIONS.md). The database migration and repeatable seed run in `lib/db.ts`; no migration-capable production ORM is claimed.
 
 Run `npm run test:integration` after a successful production build to verify customer/admin workflows against an isolated temporary database. Test-only admin credentials are generated in memory; no default password is stored.
+
 
 
 

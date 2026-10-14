@@ -1,3 +1,4 @@
+import {migrateCatalogue} from './catalogue';
 import {randomUUID,scryptSync,randomBytes} from 'node:crypto';
 import {db,databaseScope} from './storage';
 export {db,databaseScope};
@@ -34,6 +35,7 @@ await db.batch(products.map(args=>({sql:'INSERT INTO products VALUES(?,?,?,?,?,?
 const countries=[['NP','Nepal','NPR','Asia'],['AU','Australia','AUD','Oceania'],['GB','United Kingdom','GBP','Europe'],['US','United States','USD','Americas'],['CA','Canada','CAD','Americas'],...['AT:Austria','BE:Belgium','BG:Bulgaria','HR:Croatia','CY:Cyprus','CZ:Czechia','DK:Denmark','EE:Estonia','FI:Finland','FR:France','DE:Germany','GR:Greece','HU:Hungary','IE:Ireland','IT:Italy','LV:Latvia','LT:Lithuania','LU:Luxembourg','MT:Malta','NL:Netherlands','PL:Poland','PT:Portugal','RO:Romania','SK:Slovakia','SI:Slovenia','ES:Spain','SE:Sweden'].map(s=>[...s.split(':'),'EUR','EU']),...['BH:Bahrain:BHD','KW:Kuwait:KWD','OM:Oman:OMR','QA:Qatar:QAR','SA:Saudi Arabia:SAR','AE:United Arab Emirates:AED'].map(s=>[...s.split(':'),'GCC'])];
 await db.batch(countries.map(([code,name,currency,region])=>({sql:'INSERT INTO destinations VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',args:[code,name,currency,1,code==='NP'?20:15,40,30,30,5000,400,80,region]})));
 }
+await migrateCatalogue();
 if(process.env.ADMIN_EMAIL&&process.env.ADMIN_PASSWORD&&!(await db.prepare('SELECT id FROM users WHERE email=?').get(process.env.ADMIN_EMAIL))){
 if(process.env.ADMIN_PASSWORD.length<12)throw Error('ADMIN_PASSWORD must contain 12 characters');
 (await db.prepare('INSERT INTO users VALUES(?,?,?,?,?)').run(randomUUID(),process.env.ADMIN_EMAIL,'Administrator',passwordHash(process.env.ADMIN_PASSWORD),'admin'));
@@ -43,4 +45,5 @@ if(process.env.ADMIN_PASSWORD.length<12)throw Error('ADMIN_PASSWORD must contain
 }
 export function passwordHash(password:string){const salt=randomBytes(16).toString('hex');return `${salt}:${scryptSync(password,salt,64).toString('hex')}`;}
 export async function audit(actor:string,action:string,detail:unknown){(await db.prepare('INSERT INTO audit(id,actor,action,detail) VALUES(?,?,?,?)').run(randomUUID(),actor,action,JSON.stringify(detail)));}
+
 

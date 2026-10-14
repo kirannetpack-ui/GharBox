@@ -9,3 +9,14 @@ test('allergies fail closed for unknown ingredients and known conflicts',()=>{co
 test('exclusions and dietary preferences remain hard filters',()=>{assert.equal(recommend([rice],preferencesSchema.parse({excluded:['rice']})).items.length,0);assert.equal(recommend([{...rice,vegan:0}],preferencesSchema.parse({diet:'vegan'})).items.length,0);});
 test('preferred categories get budget priority',()=>{const r=recommend([rice,{...rice,id:'tea',category:'Tea'}],preferencesSchema.parse({priorities:['Tea'],budget:500}));assert.equal(r.items[0].productId,'tea');});
 test('shopping challenges generate relevant guidance without delivery promises',()=>{const r=recommend([rice],preferencesSchema.parse({issues:['unreliable-delivery','waste']}));assert.equal(r.insights.length,2);assert.match(r.insights[0],/confirmation/);assert.match(localAnswer('How much pantry stock?',undefined),/subtract/);});
+
+test('snacks are opt-in, essentials take budget priority, and duplicate commodity packs are avoided',()=>{
+ const snack={...rice,id:'snack',name:'Biscuits',essential:0,commodityId:'biscuits'};
+ const staple={...rice,essential:1,commodityId:'rice'};
+ assert.equal(recommend([snack,staple],preferencesSchema.parse({budget:500})).items[0].productId,'rice');
+ assert.ok(recommend([snack],preferencesSchema.parse({})).omitted.some(p=>/Optional extra/.test(p.reason)));
+ assert.equal(recommend([snack],preferencesSchema.parse({includeExtras:true})).items.length,1);
+ assert.equal(recommend([staple,{...staple,id:'rice-other'}],preferencesSchema.parse({})).items.length,1);
+ assert.equal(recommend([staple],preferencesSchema.parse({usedCommodities:['masoor']})).items.length,0);
+ assert.equal(recommend([{...staple,active:0}],preferencesSchema.parse({})).items.length,0);
+});

@@ -3,6 +3,7 @@ import type {Product} from './engine';
 export const preferencesSchema=z.object({
  householdName:z.string().max(80).default('My home'),recipient:z.string().max(80).default(''),address:z.string().max(400).default(''),destination:z.string().length(2).default('NP'),
  adults:z.number().int().min(1).max(20).default(2),children:z.number().int().min(0).max(20).default(0),days:z.number().int().min(7).max(90).default(30),budget:z.number().int().min(100).max(10000000).default(15000),
+ includeExtras:z.boolean().default(false),usedCommodities:z.array(z.string().max(50)).max(100).default([]),
  goal:z.enum(['my-home','family-nepal','gift']).default('my-home'),diet:z.enum(['any','vegetarian','vegan']).default('any'),allergies:z.array(z.string().max(40)).max(12).default([]),
  issues:z.array(z.enum(['hard-to-find','expensive','unreliable-delivery','too-many-shops','quality','waste','heavy-bags'])).max(7).default([]),
  priorities:z.array(z.string().max(50)).max(20).default([]),excluded:z.array(z.string().max(50)).max(50).default([]),brands:z.string().max(250).default(''),
@@ -11,24 +12,28 @@ export const preferencesSchema=z.object({
  notes:z.string().max(1200).default(''),aiConsent:z.boolean().default(false),guide:z.enum(['maya','arjun']).default('maya')
 });
 export type Preferences=z.infer<typeof preferencesSchema>;
-export type EnrichedProduct=Product&{allergens?:string[];ingredientsVerified?:boolean};
+export type EnrichedProduct=Product&{allergens?:string[];ingredientsVerified?:boolean;essential?:number;active?:number;commodityId?:string|null};
 export function recommend(products:EnrichedProduct[],preferences:Preferences){
  const p=preferencesSchema.parse(preferences);let remaining=p.budget;
  const omitted:{productId:string;name:string;reason:string}[]=[];
- const sorted=[...products].sort((a,b)=>Number(p.priorities.includes(b.category))-Number(p.priorities.includes(a.category))||Number(p.brands.toLowerCase().includes(b.brand.toLowerCase()))-Number(p.brands.toLowerCase().includes(a.brand.toLowerCase())));
- let totalPacks=0;
+ const sorted=[...products].sort((a,b)=>Number(b.essential??1)-Number(a.essential??1)||Number(p.priorities.includes(b.category))-Number(p.priorities.includes(a.category))||Number(p.brands.toLowerCase().includes(b.brand.toLowerCase()))-Number(p.brands.toLowerCase().includes(a.brand.toLowerCase())));
+ let totalPacks=0;const chosenCommodities=new Set<string>();
  const items=sorted.flatMap(product=>{
  let reason='';
- if(product.stock<=0)reason='Currently unavailable';
+ if(product.active===0)reason='Archived product';
+ else if(product.essential===0&&!p.includeExtras)reason='Optional extra — enable snacks and treats to suggest this';
+ else if(p.usedCommodities.length&&product.essential!==0&&product.commodityId&&!p.usedCommodities.includes(product.commodityId))reason='Not one of your household essentials';
+ else if(product.stock<=0)reason='Currently unavailable';
  else if(p.excluded.includes(product.id)||p.excluded.includes(product.category))reason='Excluded by you';
  else if(p.diet!=='any'&&!product.vegan)reason='Not verified for your dietary preference';
  else if(p.allergies.length&&(!product.ingredientsVerified||p.allergies.some(a=>product.allergens?.some(b=>a.toLowerCase()===b.toLowerCase()))))reason='Allergen information needs review or conflicts with your preferences';
+ if(!reason&&product.commodityId&&chosenCommodities.has(product.commodityId))reason='Another pack of this commodity is already suggested';
  if(reason){omitted.push({productId:product.id,name:product.name,reason});return [];}
  const daily=product.daily*(p.adults+p.children*.6)*(p.mealsAtHome/3);
  const requirement=Math.max(0,daily*(p.days+p.safetyDays)-(p.pantry[product.id]??0)-(p.onOrder[product.id]??0));
  const needed=Math.ceil(requirement),quantity=Math.min(needed,product.stock,100,300-totalPacks,Math.floor(remaining/product.price));
  if(quantity<=0){omitted.push({productId:product.id,name:product.name,reason:needed===0?'Pantry and incoming stock cover this period':'Outside remaining product budget'});return [];}
- remaining-=quantity*product.price;totalPacks+=quantity;
+ remaining-=quantity*product.price;totalPacks+=quantity;if(product.commodityId)chosenCommodities.add(product.commodityId);
  const reasonText=`${p.days}-day starter estimate for ${p.adults} adult${p.adults===1?'':'s'}${p.children?` and ${p.children} children`:''}, ${p.mealsAtHome} meals at home daily. ${p.safetyDays} safety days; ${p.pantry[product.id]??0} pantry packs and ${p.onOrder[product.id]??0} incoming packs deducted.${quantity<needed?' Reduced to fit stock or product budget.':''}`;
  return [{productId:product.id,quantity,reason:reasonText,confidence:'starter estimate',version:'household-v2',dailyPacks:Math.round(daily*1000)/1000,pantryPacks:p.pantry[product.id]??0,onOrderPacks:p.onOrder[product.id]??0,product}];
  });
